@@ -1,0 +1,42 @@
+terraform {
+  required_providers {
+    nomad = {
+      source  = "hashicorp/nomad"
+    }
+  }
+}
+locals {
+    nomad_addr       = "http://192.168.7.10:4646"
+    nomad_datacenter = "dc1"
+    nomad_namespace  = "deploytest"
+    docker_image     = "busybox:latest"
+    job_name         = "deploytest"
+    group_name       = "deploytest"
+    task_name        = "deploytest"
+}
+#######################################################
+provider "nomad" {
+  address = local.nomad_addr
+}
+resource "nomad_namespace" "test-ns" {
+    name = local.nomad_namespace
+}
+resource "nomad_job" "test-job" {
+  jobspec = <<END_OF_JOBSPEC
+job "${local.job_name}" {
+  datacenters = [ "${local.nomad_datacenter}" ]
+  namespace = "${nomad_namespace.test-ns.name}"
+  group "${local.group_name}" {
+    count = 1
+    task "${local.task_name}" {
+      driver = "docker"
+      config {
+        image   = "${local.docker_image}"
+        command = "/bin/sh"
+        args    = [ "-c", "echo goodnight && sleep infinity" ]
+      }
+    }
+  }
+}
+END_OF_JOBSPEC
+}
